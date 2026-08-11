@@ -40,10 +40,29 @@ def is_google_map_or_utility(link: str, clean_domain: str) -> bool:
     path = urlparse(lower_link).path
     return (
         "google." in clean_domain
+        or "maps.app.goo.gl" in clean_domain
+        or "g.page" in clean_domain
         or "/maps" in path
         or "/place/" in path
         or "/search" in path
     )
+
+
+def is_local_business_result(result: dict) -> bool:
+    """Detect map-pack/local-business style cards that are not classic organic pages."""
+    business_keys = {
+        "address",
+        "phoneNumber",
+        "rating",
+        "ratingCount",
+        "placeId",
+        "cid",
+        "latitude",
+        "longitude",
+        "openingHours",
+        "category",
+    }
+    return any(key in result for key in business_keys)
 
 
 def domains_match(target: str, found: str) -> bool:
@@ -51,7 +70,6 @@ def domains_match(target: str, found: str) -> bool:
     return (
         target == found
         or found.endswith(f".{target}")
-        or target.endswith(f".{found}")
     )
 
 # Sidebar controls country settings
@@ -85,7 +103,6 @@ if st.button("Check Ranking", type="primary"):
                 
                 found = False
                 visual_rank = 0
-                seen_domains = set()  # Tracks domains we already counted to skip sitelinks
                 
                 for result in organic_results:
                     result_url = result.get('link', '')
@@ -96,13 +113,12 @@ if st.button("Check Ranking", type="primary"):
                     # 🛡️ FILTER 1: Skip Google internal utilities/maps/places completely
                     if is_google_map_or_utility(result_url, clean_domain):
                         continue
-                    
-                    # 🛡️ FILTER 2: If we already counted this domain, it's a nested sitelink. SKIP IT!
-                    if clean_domain in seen_domains:
+
+                    # 🛡️ FILTER 2: Skip local-business/map-pack items even with external site links
+                    if is_local_business_result(result):
                         continue
-                        
-                    # This is a brand new, unique website result! Count it.
-                    seen_domains.add(clean_domain)
+
+                    # Count each remaining organic result card in the exact order shown by API.
                     visual_rank += 1
                     
                     # Test if this clean unique website matches your agency domain
