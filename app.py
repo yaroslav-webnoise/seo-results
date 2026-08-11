@@ -9,7 +9,7 @@ st.set_page_config(page_title="SEO Rank Checker", page_icon="📈")
 st.title("🔍 Google Rank Tracker")
 st.write("Find the exact organic position of any website on Google.")
 
-# Sidebar now only controls country settings
+# Sidebar controls country settings
 with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
@@ -46,9 +46,9 @@ if st.button("Check Ranking", type="primary"):
                     if any(x in result_url for x in ["google.com", "google.co.il", "/place/"]):
                         continue
                     
-                    # Extract just the root domain securely (e.g., limedigital.co.il)
+                    # Extract just the root domain securely
                     try:
-                        # Extract the part after https:// or http://
+                        # Grab the part after // and take ONLY the first item before the next /
                         clean_domain = result_url.split("//")[-1].split("/")[0]
                         # Remove www. if present
                         if clean_domain.startswith("www."):
@@ -74,8 +74,6 @@ if st.button("Check Ranking", type="primary"):
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
-
-
                     
             except Exception as e:
                 st.error(f"An error occurred: {e}")
