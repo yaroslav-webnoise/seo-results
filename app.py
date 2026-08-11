@@ -233,9 +233,10 @@ if st.button("Check Ranking", type="primary"):
 
                     if is_match:
                         matched_api_position = api_position
-                        adjusted_rank = max(1, matched_api_position - int(local_business_count))
+                        clean_organic_rank = visual_rank
+                        estimated_blended_rank = clean_organic_rank + int(local_business_count)
                         st.balloons()
-                        st.success(f"🎯 **Match Found at Clean Organic Position {adjusted_rank}!**")
+                        st.success(f"🎯 **Match Found at Clean Organic Position {clean_organic_rank}!**")
                         st.caption(f"Raw organic position from API: {matched_api_position}")
                         if use_manual_local_exclusion:
                             st.caption(f"Local businesses removed from count (manual): {int(local_business_count)}")
@@ -245,6 +246,10 @@ if st.button("Check Ranking", type="primary"):
                             if auto_local_business_count == 0:
                                 st.warning("No local-pack block found in this Serper search payload. Enable manual mode to subtract maps/businesses.")
                         st.caption(f"Filtered visual position in app logic: {visual_rank}")
+                        st.caption(
+                            "Estimated blended position (if local-pack appears above organic): "
+                            f"{estimated_blended_rank}"
+                        )
                         st.caption(
                             f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
                         )
