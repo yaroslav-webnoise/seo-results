@@ -162,6 +162,11 @@ with st.sidebar:
         help="Use a specific location to better match what you see in your browser.",
     )
     stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=True)
+    strict_homepage_mode = st.checkbox(
+        "Strict homepage mode",
+        value=False,
+        help="Only report the root URL (/). If the homepage is missing, the app will not fall back to inner pages.",
+    )
     st.subheader("📍 Local Pack Exclusion")
     use_manual_local_exclusion = st.checkbox("Set map/business count manually", value=True)
     manual_local_count = st.number_input(
@@ -317,7 +322,7 @@ if st.button("Check Ranking", type="primary"):
                     found = True
                 
                 if not found:
-                    if match_mode == "Exact URL (homepage/page only)" and same_domain_result is not None:
+                    if (match_mode == "Exact URL (homepage/page only)" or strict_homepage_mode) and same_domain_result is not None:
                         st.warning(
                             f"Exact URL '{target_domain}' is not present in the organic results for '{keyword}'."
                         )
@@ -325,6 +330,10 @@ if st.button("Check Ranking", type="primary"):
                             "Domain was found, but not the exact URL. "
                             f"Closest domain match in this SERP: {same_domain_result.get('link')} "
                             f"(position {same_domain_result.get('position')})."
+                        )
+                    elif strict_homepage_mode and same_domain_result is None:
+                        st.warning(
+                            f"Homepage '{target_domain}' was not present in the organic results for '{keyword}'."
                         )
                     else:
                         st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
