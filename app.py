@@ -143,6 +143,14 @@ def exact_url_match(target_url: str, found_url: str) -> bool:
     """Match exact normalized URL (domain + path), ignoring protocol and www."""
     return normalize_url_for_match(target_url) == normalize_url_for_match(found_url)
 
+
+def is_homepage_url(raw_url: str) -> bool:
+    """Return True when URL points to site root/homepage."""
+    normalized = normalize_url_for_match(raw_url)
+    if not normalized:
+        return False
+    return "/" not in normalized
+
 # Sidebar controls country settings
 with st.sidebar:
     st.header("⚙️ Target Market")
@@ -199,6 +207,12 @@ if st.button("Check Ranking", type="primary"):
                 visual_rank = 0
                 matched_api_position = None
                 same_domain_result = None
+                first_domain_match = None
+                first_domain_match_rank = None
+                first_domain_match_api_pos = None
+                homepage_domain_match = None
+                homepage_domain_match_rank = None
+                homepage_domain_match_api_pos = None
                 auto_local_business_count = count_non_sponsored_local_results(data)
                 local_business_count = manual_local_count if use_manual_local_exclusion else auto_local_business_count
                 
@@ -226,6 +240,17 @@ if st.button("Check Ranking", type="primary"):
                     
                     # Test if this clean unique website matches your agency domain
                     is_match = domains_match(normalized_target_domain, clean_domain)
+                    if match_mode == "Domain (any page on domain)" and is_match:
+                        if first_domain_match is None:
+                            first_domain_match = result
+                            first_domain_match_rank = visual_rank
+                            first_domain_match_api_pos = api_position
+                        if homepage_domain_match is None and is_homepage_url(result_url):
+                            homepage_domain_match = result
+                            homepage_domain_match_rank = visual_rank
+                            homepage_domain_match_api_pos = api_position
+                        continue
+
                     if match_mode == "Exact URL (homepage/page only)":
                         if same_domain_result is None and domains_match(normalized_target_domain, clean_domain):
                             same_domain_result = result
@@ -256,6 +281,40 @@ if st.button("Check Ranking", type="primary"):
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
+
+                # In domain mode, prefer homepage if available; otherwise fallback to first domain result.
+                if not found and match_mode == "Domain (any page on domain)" and first_domain_match is not None:
+                    selected = homepage_domain_match or first_domain_match
+                    selected_rank = homepage_domain_match_rank or first_domain_match_rank
+                    selected_api_pos = homepage_domain_match_api_pos or first_domain_match_api_pos
+                    clean_organic_rank = selected_rank
+                    estimated_blended_rank = clean_organic_rank + int(local_business_count)
+
+                    st.balloons()
+                    st.success(f"🎯 **Match Found at Clean Organic Position {clean_organic_rank}!**")
+                    st.caption(f"Raw organic position from API: {selected_api_pos}")
+                    if use_manual_local_exclusion:
+                        st.caption(f"Local businesses removed from count (manual): {int(local_business_count)}")
+                        st.caption(f"Auto-detected local businesses in payload: {auto_local_business_count}")
+                    else:
+                        st.caption(f"Local businesses removed from count (auto): {auto_local_business_count}")
+                        if auto_local_business_count == 0:
+                            st.warning("No local-pack block found in this Serper search payload. Enable manual mode to subtract maps/businesses.")
+                    st.caption(f"Filtered visual position in app logic: {selected_rank}")
+                    st.caption(
+                        "Estimated blended position (if local-pack appears above organic): "
+                        f"{estimated_blended_rank}"
+                    )
+                    st.caption(
+                        f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
+                    )
+                    st.info(f"**Title:** {selected.get('title')}\n\n**URL:** [{selected.get('link')}]({selected.get('link')})")
+
+                    if homepage_domain_match is None:
+                        st.caption("Homepage URL was not found; showing first matching page on the domain.")
+                    else:
+                        st.caption("Homepage URL was found and preferred over inner pages for domain mode.")
+                    found = True
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
