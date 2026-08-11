@@ -3,6 +3,11 @@ import requests
 from urllib.parse import urlparse
 import time
 
+try:
+    import geonamescache
+except Exception:
+    geonamescache = None
+
 # 🔑 HARDCODE YOUR SERPER API KEY HERE
 SERPER_API_KEY = "8f3d889a24f51e10833a2d38fcd75f4645e55bc0"
 
@@ -11,88 +16,55 @@ st.set_page_config(page_title="SEO Rank Checker", page_icon="📈")
 st.title("🔍 Google Rank Tracker")
 st.write("Find the exact organic position of any website on Google.")
 
-CITY_OPTIONS_BY_COUNTRY = {
-    "il": [
-        "No location",
-        "Tel Aviv, Israel",
-        "Jerusalem, Israel",
-        "Haifa, Israel",
-        "Rishon LeZion, Israel",
-        "Petah Tikva, Israel",
-        "Ashdod, Israel",
-        "Netanya, Israel",
-        "Beersheba, Israel",
-        "Holon, Israel",
-        "Bnei Brak, Israel",
-    ],
-    "us": [
-        "No location",
-        "New York, NY, USA",
-        "Los Angeles, CA, USA",
-        "Chicago, IL, USA",
-        "Houston, TX, USA",
-        "Phoenix, AZ, USA",
-        "Philadelphia, PA, USA",
-        "San Antonio, TX, USA",
-        "San Diego, CA, USA",
-        "Dallas, TX, USA",
-        "San Jose, CA, USA",
-    ],
-    "uk": [
-        "No location",
-        "London, UK",
-        "Manchester, UK",
-        "Birmingham, UK",
-        "Leeds, UK",
-        "Glasgow, UK",
-        "Liverpool, UK",
-        "Bristol, UK",
-        "Newcastle, UK",
-        "Sheffield, UK",
-        "Nottingham, UK",
-    ],
-    "ca": [
-        "No location",
-        "Toronto, Canada",
-        "Montreal, Canada",
-        "Vancouver, Canada",
-        "Calgary, Canada",
-        "Edmonton, Canada",
-        "Ottawa, Canada",
-        "Winnipeg, Canada",
-        "Quebec City, Canada",
-    ],
-    "au": [
-        "No location",
-        "Sydney, Australia",
-        "Melbourne, Australia",
-        "Brisbane, Australia",
-        "Perth, Australia",
-        "Adelaide, Australia",
-        "Canberra, Australia",
-        "Gold Coast, Australia",
-    ],
-    "de": [
-        "No location",
-        "Berlin, Germany",
-        "Hamburg, Germany",
-        "Munich, Germany",
-        "Cologne, Germany",
-        "Frankfurt, Germany",
-        "Stuttgart, Germany",
-        "Dusseldorf, Germany",
-    ],
-    "fr": [
-        "No location",
-        "Paris, France",
-        "Marseille, France",
-        "Lyon, France",
-        "Toulouse, France",
-        "Nice, France",
-        "Nantes, France",
-        "Strasbourg, France",
-    ],
-}
+
+@st.cache_data(ttl=86400)
+def get_city_options(gl_country: str, limit: int = 500) -> list[str]:
+    """Return a searchable city list from geonamescache for the selected country."""
+    if geonamescache is None:
+        return ["No location"]
+
+    gl_to_iso2 = {
+        "il": "IL",
+        "us": "US",
+        "uk": "GB",
+        "ca": "CA",
+        "au": "AU",
+        "de": "DE",
+        "fr": "FR",
+    }
+    target_iso2 = gl_to_iso2.get(gl_country, gl_country.upper())
+
+    gc = geonamescache.GeonamesCache()
+    countries = gc.get_countries()
+    cities = gc.get_cities()
+    country_name = countries.get(target_iso2, {}).get("name", target_iso2)
+
+    filtered = []
+    for city in cities.values():
+        if city.get("countrycode") != target_iso2:
+            continue
+        population = int(city.get("population") or 0)
+        if population <= 0:
+            continue
+        city_name = (city.get("name") or "").strip()
+        if not city_name:
+            continue
+        filtered.append((population, city_name))
+
+    # Keep prominent cities first and avoid duplicates by city label.
+    filtered.sort(key=lambda item: item[0], reverse=True)
+    seen = set()
+    options = ["No location"]
+    for _, city_name in filtered:
+        label = f"{city_name}, {country_name}"
+        if label in seen:
+            continue
+        seen.add(label)
+        options.append(label)
+        if len(options) >= limit + 1:
+            break
+
+    return options
 
 
 @st.cache_data(ttl=300)
@@ -241,7 +213,9 @@ with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
     language = st.selectbox("Google Language (hl)", ["en", "he", "ar", "fr", "de", "es"], index=0)
-    location_options = CITY_OPTIONS_BY_COUNTRY.get(country, ["No location"])
+    location_options = get_city_options(country)
+    if geonamescache is None:
+        st.caption("Install geonamescache to enable full city list.")
     selected_location = st.selectbox(
         "Location (city)",
         location_options,
