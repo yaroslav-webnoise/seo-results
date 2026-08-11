@@ -317,13 +317,17 @@ if st.button("Check Ranking", type="primary"):
                     found = True
                 
                 if not found:
-                    st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
                     if match_mode == "Exact URL (homepage/page only)" and same_domain_result is not None:
+                        st.warning(
+                            f"Exact URL '{target_domain}' is not present in the organic results for '{keyword}'."
+                        )
                         st.info(
                             "Domain was found, but not the exact URL. "
                             f"Closest domain match in this SERP: {same_domain_result.get('link')} "
                             f"(position {same_domain_result.get('position')})."
                         )
+                    else:
+                        st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
                 elif stable_mode:
                     st.caption("Stable mode is ON: identical query + country reuses cached data for 5 minutes.")
                 else:
