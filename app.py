@@ -35,7 +35,9 @@ def fetch_serper_data(
     headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
     response = requests.post(url, json=payload, headers=headers, timeout=30)
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+    data["_fetched_at"] = int(time.time())
+    return data
 
 
 def normalize_domain(raw_value: str) -> str:
@@ -162,6 +164,9 @@ with st.sidebar:
         help="Use a specific location to better match what you see in your browser.",
     )
     stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=True)
+    if st.button("Clear cached SERP data"):
+        st.cache_data.clear()
+        st.success("Cached SERP data cleared. The next check will fetch fresh results.")
     strict_homepage_mode = st.checkbox(
         "Strict homepage mode",
         value=False,
@@ -206,6 +211,10 @@ if st.button("Check Ranking", type="primary"):
                     location,
                     cache_buster,
                 )
+                fetched_at_epoch = data.get("_fetched_at")
+                fetched_at_text = "unknown"
+                if isinstance(fetched_at_epoch, int):
+                    fetched_at_text = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(fetched_at_epoch))
                 organic_results = data.get('organic', [])
                 
                 found = False
@@ -290,6 +299,7 @@ if st.button("Check Ranking", type="primary"):
                         st.caption(
                             f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
                         )
+                        st.caption(f"SERP snapshot time: {fetched_at_text}")
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
@@ -320,6 +330,7 @@ if st.button("Check Ranking", type="primary"):
                     st.caption(
                         f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
                     )
+                    st.caption(f"SERP snapshot time: {fetched_at_text}")
                     st.info(f"**Title:** {selected.get('title')}\n\n**URL:** [{selected.get('link')}]({selected.get('link')})")
 
                     if homepage_domain_match is None:
