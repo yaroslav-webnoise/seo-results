@@ -73,6 +73,7 @@ def fetch_serper_data(
     gl_country: str,
     hl_language: str,
     location: str,
+    google_domain: str,
     cache_buster: str = "",
 ) -> dict:
     """Fetch Serper data. cache_buster forces a fresh request when needed."""
@@ -84,6 +85,9 @@ def fetch_serper_data(
         "gl": gl_country,
         "hl": hl_language,
     }
+    google_domain_clean = (google_domain or "").strip().lower()
+    if google_domain_clean:
+        payload["googleDomain"] = google_domain_clean
     location_clean = (location or "").strip()
     if location_clean:
         payload["location"] = location_clean
@@ -213,6 +217,30 @@ with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
     language = st.selectbox("Google Language (hl)", ["he", "en", "ar", "fr", "de", "es"], index=0)
+    default_google_domain_by_gl = {
+        "il": "google.co.il",
+        "us": "google.com",
+        "uk": "google.co.uk",
+        "ca": "google.ca",
+        "au": "google.com.au",
+        "de": "google.de",
+        "fr": "google.fr",
+    }
+    google_domain_options = [
+        "google.com",
+        "google.co.il",
+        "google.co.uk",
+        "google.ca",
+        "google.com.au",
+        "google.de",
+        "google.fr",
+    ]
+    google_domain = st.selectbox(
+        "Google Domain",
+        google_domain_options,
+        index=google_domain_options.index(default_google_domain_by_gl.get(country, "google.com")),
+        help="Match the Google host used in your browser as closely as possible.",
+    )
     location_options = get_city_options(country)
     if geonamescache is None:
         st.caption("Install geonamescache to enable full city list.")
@@ -223,7 +251,7 @@ with st.sidebar:
         help="Search inside this dropdown and choose a city to better match browser results.",
     )
     location = "" if selected_location == "No location" else selected_location
-    stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=True)
+    stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=False)
     if st.button("Clear cached SERP data"):
         st.cache_data.clear()
         st.success("Cached SERP data cleared. The next check will fetch fresh results.")
@@ -269,6 +297,7 @@ if st.button("Check Ranking", type="primary"):
                     country,
                     language,
                     location,
+                    google_domain,
                     cache_buster,
                 )
                 fetched_at_epoch = data.get("_fetched_at")
@@ -363,7 +392,7 @@ if st.button("Check Ranking", type="primary"):
                             f"{'homepage/root' if matched_is_homepage else 'inner page'}"
                         )
                         st.caption(
-                            f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
+                            f"Context: gl={country}, hl={language}, googleDomain={google_domain}, location={location.strip() or 'not set'}"
                         )
                         st.caption(f"SERP snapshot time: {fetched_at_text}")
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
@@ -401,7 +430,7 @@ if st.button("Check Ranking", type="primary"):
                             st.warning("No local-pack block found in this Serper search payload. Enable manual mode to subtract maps/businesses.")
                     st.caption(f"Organic position after map/business adjustment: {adjusted_rank}")
                     st.caption(
-                        f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
+                        f"Context: gl={country}, hl={language}, googleDomain={google_domain}, location={location.strip() or 'not set'}"
                     )
                     st.caption(f"SERP snapshot time: {fetched_at_text}")
                     st.info(f"**Title:** {selected.get('title')}\n\n**URL:** [{selected.get('link')}]({selected.get('link')})")
