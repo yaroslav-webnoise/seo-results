@@ -61,6 +61,21 @@ def normalize_domain(raw_value: str) -> str:
     return domain.replace("www.", "").strip("/")
 
 
+def normalize_url_for_match(raw_value: str) -> str:
+    """Normalize a URL for exact URL matching (scheme ignored, path preserved)."""
+    value = (raw_value or "").strip().lower()
+    if not value:
+        return ""
+
+    if "://" not in value:
+        value = f"https://{value}"
+
+    parsed = urlparse(value)
+    domain = (parsed.netloc or "").lower().replace("www.", "")
+    path = (parsed.path or "").rstrip("/")
+    return f"{domain}{path}"
+
+
 def is_google_map_or_utility(link: str, clean_domain: str) -> bool:
     """Skip Google internal/map-style results that are not real organic sites."""
     lower_link = (link or "").lower()
@@ -114,6 +129,11 @@ def domains_match(target: str, found: str) -> bool:
         or found.endswith(f".{target}")
     )
 
+
+def exact_url_match(target_url: str, found_url: str) -> bool:
+    """Match exact normalized URL (domain + path), ignoring protocol and www."""
+    return normalize_url_for_match(target_url) == normalize_url_for_match(found_url)
+
 # Sidebar controls country settings
 with st.sidebar:
     st.header("⚙️ Target Market")
@@ -139,6 +159,11 @@ with st.sidebar:
 # Main input forms
 keyword = st.text_input("Enter Keyword", placeholder="e.g., digital agency")
 target_domain = st.text_input("Enter Target Domain", placeholder="e.g., limedigital.co.il")
+match_mode = st.radio(
+    "Match Mode",
+    ["Domain (any page on domain)", "Exact URL (homepage/page only)"],
+    horizontal=True,
+)
 normalized_target_domain = normalize_domain(target_domain)
 
 if st.button("Check Ranking", type="primary"):
@@ -190,7 +215,11 @@ if st.button("Check Ranking", type="primary"):
                     visual_rank += 1
                     
                     # Test if this clean unique website matches your agency domain
-                    if domains_match(normalized_target_domain, clean_domain):
+                    is_match = domains_match(normalized_target_domain, clean_domain)
+                    if match_mode == "Exact URL (homepage/page only)":
+                        is_match = exact_url_match(target_domain, result_url)
+
+                    if is_match:
                         matched_api_position = api_position
                         adjusted_rank = max(1, matched_api_position - int(local_business_count))
                         st.balloons()
