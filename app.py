@@ -36,31 +36,40 @@ if st.button("Check Ranking", type="primary"):
                 organic_results = data.get('organic', [])
                 
                 found = False
-                visual_rank = 0  # Track clean human placement
+                visual_rank = 0
+                seen_domains = set()  # Tracks domains we already counted
                 
                 for result in organic_results:
                     result_url = result.get('link', '').lower()
-                    title = result.get('title', '')
-                    snippet = result.get('snippet', '')
                     
-                    # 🛡️ FILTER 1: Skip Google Maps system widgets and location cards
-                    if any(x in result_url for x in ["://google.com", "google.co.il/maps", "/place/", "://google.com"]):
+                    # 🛡️ FILTER 1: Skip Google internal utilities/maps
+                    if any(x in result_url for x in ["google.com", "google.co.il", "/place/"]):
+                        continue
+                    
+                    # Clean the link to extract just the main domain (e.g., example.com)
+                    # This group merges subpages and sitelinks together
+                    try:
+                        domain_parts = result_url.split("//")[-1].split("/")[0]
+                        clean_domain = domain_parts.replace("www.", "")
+                    except Exception:
+                        clean_domain = result_url
+                    
+                    # 🛡️ FILTER 2: If we already counted this domain, it's a sub-link. SKIP IT!
+                    if clean_domain in seen_domains:
                         continue
                         
-                    # 🛡️ FILTER 2: Skip Sitelinks/Sub-links (they don't have individual text descriptions/snippets)
-                    if not snippet or not title:
-                        continue
-                        
-                    # It passed both safety filters! Increment our true visual counter
+                    # This is a brand new, unique website result! Count it.
+                    seen_domains.add(clean_domain)
                     visual_rank += 1
                     
-                    # Test if this validated result matches your agency domain
-                    if target_domain.lower() in result_url:
+                    # Test if this unique website matches your agency domain
+                    if target_domain.lower() in clean_domain:
                         st.balloons()
                         st.success(f"🎯 **Match Found at True Visual Position {visual_rank}!**")
-                        st.info(f"**Title:** {title}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
+                        st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
+
 
 
                 
