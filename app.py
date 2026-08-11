@@ -212,7 +212,7 @@ def is_homepage_url(raw_url: str) -> bool:
 with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
-    language = st.selectbox("Google Language (hl)", ["en", "he", "ar", "fr", "de", "es"], index=0)
+    language = st.selectbox("Google Language (hl)", ["he", "en", "ar", "fr", "de", "es"], index=0)
     location_options = get_city_options(country)
     if geonamescache is None:
         st.caption("Install geonamescache to enable full city list.")
