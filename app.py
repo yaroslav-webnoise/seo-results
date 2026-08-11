@@ -36,25 +36,32 @@ if st.button("Check Ranking", type="primary"):
                 organic_results = data.get('organic', [])
                 
                 found = False
-                visual_rank = 0  # Track clean, human visual placement
+                visual_rank = 0  # Track clean human placement
                 
                 for result in organic_results:
                     result_url = result.get('link', '').lower()
+                    title = result.get('title', '')
+                    snippet = result.get('snippet', '')
                     
-                    # 🛡️ FILTER: Skip any Google Maps business directories or cards
-                    if "://google.com" in result_url or "google.co.il/maps" in result_url or "/place/" in result_url:
+                    # 🛡️ FILTER 1: Skip Google Maps system widgets and location cards
+                    if any(x in result_url for x in ["://google.com", "google.co.il/maps", "/place/", "://google.com"]):
                         continue
                         
-                    # It's a clean text link, increment our human rank tracker
+                    # 🛡️ FILTER 2: Skip Sitelinks/Sub-links (they don't have individual text descriptions/snippets)
+                    if not snippet or not title:
+                        continue
+                        
+                    # It passed both safety filters! Increment our true visual counter
                     visual_rank += 1
                     
-                    # Check if this clean link belongs to your website
+                    # Test if this validated result matches your agency domain
                     if target_domain.lower() in result_url:
                         st.balloons()
                         st.success(f"🎯 **Match Found at True Visual Position {visual_rank}!**")
-                        st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
+                        st.info(f"**Title:** {title}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
+
 
                 
                 if not found:
