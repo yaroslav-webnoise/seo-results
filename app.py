@@ -13,11 +13,25 @@ st.write("Find the exact organic position of any website on Google.")
 
 
 @st.cache_data(ttl=300)
-def fetch_serper_data(query: str, gl_country: str, cache_buster: str = "") -> dict:
+def fetch_serper_data(
+    query: str,
+    gl_country: str,
+    hl_language: str,
+    location: str,
+    cache_buster: str = "",
+) -> dict:
     """Fetch Serper data. cache_buster forces a fresh request when needed."""
     del cache_buster
     url = "https://google.serper.dev/search"
-    payload = {"q": query, "num": 100, "gl": gl_country}
+    payload = {
+        "q": query,
+        "num": 100,
+        "gl": gl_country,
+        "hl": hl_language,
+    }
+    location_clean = (location or "").strip()
+    if location_clean:
+        payload["location"] = location_clean
     headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
     response = requests.post(url, json=payload, headers=headers, timeout=30)
     response.raise_for_status()
@@ -104,7 +118,23 @@ def domains_match(target: str, found: str) -> bool:
 with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
+    language = st.selectbox("Google Language (hl)", ["en", "he", "ar", "fr", "de", "es"], index=0)
+    location = st.text_input(
+        "Location (city/region)",
+        placeholder="e.g., Tel Aviv, Israel",
+        help="Use a specific location to better match what you see in your browser.",
+    )
     stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=True)
+    st.subheader("📍 Local Pack Exclusion")
+    use_manual_local_exclusion = st.checkbox("Set map/business count manually", value=True)
+    manual_local_count = st.number_input(
+        "Non-sponsored map/business results above organic",
+        min_value=0,
+        max_value=20,
+        value=3,
+        step=1,
+        help="Use this when Serper search response does not include local-pack data.",
+    )
 
 # Main input forms
 keyword = st.text_input("Enter Keyword", placeholder="e.g., digital agency")
@@ -122,13 +152,20 @@ if st.button("Check Ranking", type="primary"):
         with st.spinner("Searching Google..."):
             try:
                 cache_buster = "" if stable_mode else str(time.time())
-                data = fetch_serper_data(keyword.strip(), country, cache_buster)
+                data = fetch_serper_data(
+                    keyword.strip(),
+                    country,
+                    language,
+                    location,
+                    cache_buster,
+                )
                 organic_results = data.get('organic', [])
                 
                 found = False
                 visual_rank = 0
                 matched_api_position = None
-                local_business_count = count_non_sponsored_local_results(data)
+                auto_local_business_count = count_non_sponsored_local_results(data)
+                local_business_count = manual_local_count if use_manual_local_exclusion else auto_local_business_count
                 
                 for result in organic_results:
                     result_url = result.get('link', '')
@@ -155,12 +192,21 @@ if st.button("Check Ranking", type="primary"):
                     # Test if this clean unique website matches your agency domain
                     if domains_match(normalized_target_domain, clean_domain):
                         matched_api_position = api_position
-                        adjusted_rank = max(1, matched_api_position - local_business_count)
+                        adjusted_rank = max(1, matched_api_position - int(local_business_count))
                         st.balloons()
                         st.success(f"🎯 **Match Found at Clean Organic Position {adjusted_rank}!**")
                         st.caption(f"Raw organic position from API: {matched_api_position}")
-                        st.caption(f"Local businesses removed from count: {local_business_count}")
+                        if use_manual_local_exclusion:
+                            st.caption(f"Local businesses removed from count (manual): {int(local_business_count)}")
+                            st.caption(f"Auto-detected local businesses in payload: {auto_local_business_count}")
+                        else:
+                            st.caption(f"Local businesses removed from count (auto): {auto_local_business_count}")
+                            if auto_local_business_count == 0:
+                                st.warning("No local-pack block found in this Serper search payload. Enable manual mode to subtract maps/businesses.")
                         st.caption(f"Filtered visual position in app logic: {visual_rank}")
+                        st.caption(
+                            f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
+                        )
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
