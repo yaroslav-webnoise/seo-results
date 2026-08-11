@@ -11,6 +11,89 @@ st.set_page_config(page_title="SEO Rank Checker", page_icon="📈")
 st.title("🔍 Google Rank Tracker")
 st.write("Find the exact organic position of any website on Google.")
 
+CITY_OPTIONS_BY_COUNTRY = {
+    "il": [
+        "No location",
+        "Tel Aviv, Israel",
+        "Jerusalem, Israel",
+        "Haifa, Israel",
+        "Rishon LeZion, Israel",
+        "Petah Tikva, Israel",
+        "Ashdod, Israel",
+        "Netanya, Israel",
+        "Beersheba, Israel",
+        "Holon, Israel",
+        "Bnei Brak, Israel",
+    ],
+    "us": [
+        "No location",
+        "New York, NY, USA",
+        "Los Angeles, CA, USA",
+        "Chicago, IL, USA",
+        "Houston, TX, USA",
+        "Phoenix, AZ, USA",
+        "Philadelphia, PA, USA",
+        "San Antonio, TX, USA",
+        "San Diego, CA, USA",
+        "Dallas, TX, USA",
+        "San Jose, CA, USA",
+    ],
+    "uk": [
+        "No location",
+        "London, UK",
+        "Manchester, UK",
+        "Birmingham, UK",
+        "Leeds, UK",
+        "Glasgow, UK",
+        "Liverpool, UK",
+        "Bristol, UK",
+        "Newcastle, UK",
+        "Sheffield, UK",
+        "Nottingham, UK",
+    ],
+    "ca": [
+        "No location",
+        "Toronto, Canada",
+        "Montreal, Canada",
+        "Vancouver, Canada",
+        "Calgary, Canada",
+        "Edmonton, Canada",
+        "Ottawa, Canada",
+        "Winnipeg, Canada",
+        "Quebec City, Canada",
+    ],
+    "au": [
+        "No location",
+        "Sydney, Australia",
+        "Melbourne, Australia",
+        "Brisbane, Australia",
+        "Perth, Australia",
+        "Adelaide, Australia",
+        "Canberra, Australia",
+        "Gold Coast, Australia",
+    ],
+    "de": [
+        "No location",
+        "Berlin, Germany",
+        "Hamburg, Germany",
+        "Munich, Germany",
+        "Cologne, Germany",
+        "Frankfurt, Germany",
+        "Stuttgart, Germany",
+        "Dusseldorf, Germany",
+    ],
+    "fr": [
+        "No location",
+        "Paris, France",
+        "Marseille, France",
+        "Lyon, France",
+        "Toulouse, France",
+        "Nice, France",
+        "Nantes, France",
+        "Strasbourg, France",
+    ],
+}
+
 
 @st.cache_data(ttl=300)
 def fetch_serper_data(
@@ -158,11 +241,14 @@ with st.sidebar:
     st.header("⚙️ Target Market")
     country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
     language = st.selectbox("Google Language (hl)", ["en", "he", "ar", "fr", "de", "es"], index=0)
-    location = st.text_input(
-        "Location (city/region)",
-        placeholder="e.g., Tel Aviv, Israel",
-        help="Use a specific location to better match what you see in your browser.",
+    location_options = CITY_OPTIONS_BY_COUNTRY.get(country, ["No location"])
+    selected_location = st.selectbox(
+        "Location (city)",
+        location_options,
+        index=0,
+        help="Search inside this dropdown and choose a city to better match browser results.",
     )
+    location = "" if selected_location == "No location" else selected_location
     stable_mode = st.checkbox("Stable mode (cache same query for 5 min)", value=True)
     if st.button("Clear cached SERP data"):
         st.cache_data.clear()
