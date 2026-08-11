@@ -46,15 +46,13 @@ if st.button("Check Ranking", type="primary"):
                     if any(x in result_url for x in ["google.com", "google.co.il", "/place/"]):
                         continue
                     
-                    # Clean the link to extract just the main domain (e.g., example.com)
-                    # This group merges subpages and sitelinks together
+                    # Extract just the root domain securely (e.g., limedigital.co.il)
                     try:
-                        domain_parts = result_url.split("//")[-1].split("/")[0]
-                        clean_domain = domain_parts.replace("www.", "")
+                        clean_domain = result_url.split("//")[-1].split("/")[0].replace("www.", "")
                     except Exception:
                         clean_domain = result_url
                     
-                    # 🛡️ FILTER 2: If we already counted this domain, it's a sub-link. SKIP IT!
+                    # 🛡️ FILTER 2: If we already counted this domain, it's a nested sub-link. SKIP IT!
                     if clean_domain in seen_domains:
                         continue
                         
@@ -69,12 +67,10 @@ if st.button("Check Ranking", type="primary"):
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
-
-
-
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
+
                     
             except Exception as e:
                 st.error(f"An error occurred: {e}")
