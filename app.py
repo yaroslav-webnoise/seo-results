@@ -265,11 +265,16 @@ if st.button("Check Ranking", type="primary"):
                         matched_api_position = api_position
                         raw_organic_rank = matched_api_position
                         adjusted_rank = max(1, raw_organic_rank - int(local_business_count))
+                        organic_page_number = ((raw_organic_rank - 1) // 10) + 1
+                        organic_page_position = ((raw_organic_rank - 1) % 10) + 1
                         matched_url = result.get('link', '')
                         matched_is_homepage = is_homepage_url(matched_url)
                         st.balloons()
                         st.success(f"🎯 **Match Found at Adjusted Organic Position {adjusted_rank}!**")
                         st.caption(f"Raw organic position from API: {raw_organic_rank}")
+                        st.caption(
+                            f"Organic page position: page {organic_page_number}, place {organic_page_position}"
+                        )
                         if use_manual_local_exclusion:
                             st.caption(f"Local businesses removed from count (manual): {int(local_business_count)}")
                             st.caption(f"Auto-detected local businesses in payload: {auto_local_business_count}")
@@ -295,10 +300,15 @@ if st.button("Check Ranking", type="primary"):
                     selected_rank = homepage_domain_match_rank or first_domain_match_rank
                     selected_api_pos = homepage_domain_match_api_pos or first_domain_match_api_pos
                     adjusted_rank = max(1, selected_api_pos - int(local_business_count))
+                    organic_page_number = ((selected_api_pos - 1) // 10) + 1
+                    organic_page_position = ((selected_api_pos - 1) % 10) + 1
 
                     st.balloons()
                     st.success(f"🎯 **Match Found at Adjusted Organic Position {adjusted_rank}!**")
                     st.caption(f"Raw organic position from API: {selected_api_pos}")
+                    st.caption(
+                        f"Organic page position: page {organic_page_number}, place {organic_page_position}"
+                    )
                     if use_manual_local_exclusion:
                         st.caption(f"Local businesses removed from count (manual): {int(local_business_count)}")
                         st.caption(f"Auto-detected local businesses in payload: {auto_local_business_count}")
