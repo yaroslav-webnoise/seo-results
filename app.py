@@ -16,7 +16,7 @@ with st.sidebar:
 
 # Main input forms
 keyword = st.text_input("Enter Keyword", placeholder="e.g., digital agency")
-target_domain = st.text_input("Enter Target Domain", placeholder="e.g., example.com")
+target_domain = st.text_input("Enter Target Domain", placeholder="e.g., limedigital.co.il")
 
 if st.button("Check Ranking", type="primary"):
     if not SERPER_API_KEY or SERPER_API_KEY == "PASTE_YOUR_ACTUAL_API_KEY_HERE":
@@ -37,26 +37,21 @@ if st.button("Check Ranking", type="primary"):
                 
                 found = False
                 visual_rank = 0
-                seen_domains = set()  # Tracks domains we already counted
+                seen_domains = set()  # Tracks domains we already counted to skip sitelinks
                 
                 for result in organic_results:
                     result_url = result.get('link', '').lower()
                     
-                    # 🛡️ FILTER 1: Skip Google internal utilities/maps
-                    if any(x in result_url for x in ["google.com", "google.co.il", "/place/"]):
+                    # 🛡️ FILTER 1: Skip Google internal utilities/maps/places completely
+                    if any(x in result_url for x in ["google.com", "google.co.il", "/place/", "/search?"]):
                         continue
                     
-                    # Extract just the root domain securely
-                    try:
-                        # Grab the part after // and take ONLY the first item before the next /
-                        clean_domain = result_url.split("//")[-1].split("/")[0]
-                        # Remove www. if present
-                        if clean_domain.startswith("www."):
-                            clean_domain = clean_domain[4:]
-                    except Exception:
-                        clean_domain = result_url
+                    # Simple core domain extraction using basic string splitting
+                    # "https://limedigital.co.il" -> "www.limedigital.co.il" -> "limedigital.co.il"
+                    raw_domain = result_url.split("//")[-1].split("/")[0]
+                    clean_domain = raw_domain.replace("www.", "")
                     
-                    # 🛡️ FILTER 2: If we already counted this domain, it's a nested sub-link. SKIP IT!
+                    # 🛡️ FILTER 2: If we already counted this domain, it's a nested sitelink. SKIP IT!
                     if clean_domain in seen_domains:
                         continue
                         
@@ -64,7 +59,7 @@ if st.button("Check Ranking", type="primary"):
                     seen_domains.add(clean_domain)
                     visual_rank += 1
                     
-                    # Test if this unique website matches your agency domain
+                    # Test if this clean unique website matches your agency domain
                     if target_domain.lower() in clean_domain:
                         st.balloons()
                         st.success(f"🎯 **Match Found at True Visual Position {visual_rank}!**")
