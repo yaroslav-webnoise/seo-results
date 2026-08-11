@@ -12,7 +12,8 @@ st.write("Find the exact organic position of any website on Google.")
 # Sidebar now only controls country settings
 with st.sidebar:
     st.header("⚙️ Target Market")
-    country = st.selectbox("Google Country (gl)", ["us", "uk", "ca", "au", "de", "fr"], index=0)
+    country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au"], index=0)
+
 
 # Main input forms
 keyword = st.text_input("Enter Keyword", placeholder="e.g., digital agency")
