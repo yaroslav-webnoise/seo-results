@@ -36,18 +36,26 @@ if st.button("Check Ranking", type="primary"):
                 organic_results = data.get('organic', [])
                 
                 found = False
+                visual_rank = 0  # Track clean, human visual placement
+                
                 for result in organic_results:
-                    # Extract Google's clean organic position ranking
-                    actual_rank = result.get('position')
+                    result_url = result.get('link', '').lower()
                     
-                    # If it has a clean position number, it's a real organic link (skipping maps/widgets)
-                    if actual_rank is not None:
-                        if target_domain.lower() in result.get('link', '').lower():
-                            st.balloons()
-                            st.success(f"🎯 **Match Found at True Organic Position {actual_rank}!**")
-                            st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
-                            found = True
-                            break
+                    # 🛡️ FILTER: Skip any Google Maps business directories or cards
+                    if "://google.com" in result_url or "google.co.il/maps" in result_url or "/place/" in result_url:
+                        continue
+                        
+                    # It's a clean text link, increment our human rank tracker
+                    visual_rank += 1
+                    
+                    # Check if this clean link belongs to your website
+                    if target_domain.lower() in result_url:
+                        st.balloons()
+                        st.success(f"🎯 **Match Found at True Visual Position {visual_rank}!**")
+                        st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
+                        found = True
+                        break
+
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
