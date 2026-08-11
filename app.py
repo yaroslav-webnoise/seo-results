@@ -67,6 +67,15 @@ def normalize_url_for_match(raw_value: str) -> str:
     if not value:
         return ""
 
+    # Handle markdown links like: [https://example.com](https://example.com)
+    if value.startswith("[") and "](" in value and value.endswith(")"):
+        try:
+            value = value.split("](", 1)[1][:-1]
+        except Exception:
+            pass
+
+    value = value.strip("[]() ")
+
     if "://" not in value:
         value = f"https://{value}"
 
@@ -189,6 +198,7 @@ if st.button("Check Ranking", type="primary"):
                 found = False
                 visual_rank = 0
                 matched_api_position = None
+                same_domain_result = None
                 auto_local_business_count = count_non_sponsored_local_results(data)
                 local_business_count = manual_local_count if use_manual_local_exclusion else auto_local_business_count
                 
@@ -217,6 +227,8 @@ if st.button("Check Ranking", type="primary"):
                     # Test if this clean unique website matches your agency domain
                     is_match = domains_match(normalized_target_domain, clean_domain)
                     if match_mode == "Exact URL (homepage/page only)":
+                        if same_domain_result is None and domains_match(normalized_target_domain, clean_domain):
+                            same_domain_result = result
                         is_match = exact_url_match(target_domain, result_url)
 
                     if is_match:
@@ -242,6 +254,12 @@ if st.button("Check Ranking", type="primary"):
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
+                    if match_mode == "Exact URL (homepage/page only)" and same_domain_result is not None:
+                        st.info(
+                            "Domain was found, but not the exact URL. "
+                            f"Closest domain match in this SERP: {same_domain_result.get('link')} "
+                            f"(position {same_domain_result.get('position')})."
+                        )
                 elif stable_mode:
                     st.caption("Stable mode is ON: identical query + country reuses cached data for 5 minutes.")
                 else:
