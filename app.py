@@ -48,7 +48,11 @@ if st.button("Check Ranking", type="primary"):
                     
                     # Extract just the root domain securely (e.g., limedigital.co.il)
                     try:
-                        clean_domain = result_url.split("//")[-1].split("/")[0].replace("www.", "")
+                        # Extract the part after https:// or http://
+                        clean_domain = result_url.split("//")[-1].split("/")[0]
+                        # Remove www. if present
+                        if clean_domain.startswith("www."):
+                            clean_domain = clean_domain[4:]
                     except Exception:
                         clean_domain = result_url
                     
@@ -70,6 +74,7 @@ if st.button("Check Ranking", type="primary"):
                 
                 if not found:
                     st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
+
 
                     
             except Exception as e:
