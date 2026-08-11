@@ -78,6 +78,21 @@ def is_local_business_result(result: dict) -> bool:
     return any(key in result for key in business_keys)
 
 
+def count_non_sponsored_local_results(data: dict) -> int:
+    """Count map/business entries in local pack while excluding sponsored entries."""
+    places = data.get("places", []) or []
+    count = 0
+    for place in places:
+        if not isinstance(place, dict):
+            continue
+        # Different payloads may use either 'sponsored' or ad-like labels.
+        sponsored = bool(place.get("sponsored") or place.get("isSponsored"))
+        if sponsored:
+            continue
+        count += 1
+    return count
+
+
 def domains_match(target: str, found: str) -> bool:
     """Match exact domain and common subdomain variations."""
     return (
@@ -113,7 +128,7 @@ if st.button("Check Ranking", type="primary"):
                 found = False
                 visual_rank = 0
                 matched_api_position = None
-                matched_result = None
+                local_business_count = count_non_sponsored_local_results(data)
                 
                 for result in organic_results:
                     result_url = result.get('link', '')
@@ -140,10 +155,12 @@ if st.button("Check Ranking", type="primary"):
                     # Test if this clean unique website matches your agency domain
                     if domains_match(normalized_target_domain, clean_domain):
                         matched_api_position = api_position
-                        matched_result = result
+                        adjusted_rank = max(1, matched_api_position - local_business_count)
                         st.balloons()
-                        st.success(f"🎯 **Match Found at Organic Position {matched_api_position}!**")
-                        st.caption(f"Filtered visual position in this app: {visual_rank}")
+                        st.success(f"🎯 **Match Found at Clean Organic Position {adjusted_rank}!**")
+                        st.caption(f"Raw organic position from API: {matched_api_position}")
+                        st.caption(f"Local businesses removed from count: {local_business_count}")
+                        st.caption(f"Filtered visual position in app logic: {visual_rank}")
                         st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
                         found = True
                         break
