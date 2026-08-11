@@ -25,7 +25,7 @@ if st.button("Check Ranking", type="primary"):
         st.warning("Please fill in both the Keyword and Target Domain fields.")
     else:
         with st.spinner("Searching Google..."):
-            url = "https://serper.dev"
+            url = "https://google.serper.dev/search"
             payload = {"q": keyword, "num": 100, "gl": country}
             headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
             
