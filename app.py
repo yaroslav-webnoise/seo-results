@@ -265,6 +265,8 @@ if st.button("Check Ranking", type="primary"):
                         matched_api_position = api_position
                         clean_organic_rank = visual_rank
                         estimated_blended_rank = clean_organic_rank + int(local_business_count)
+                        matched_url = result.get('link', '')
+                        matched_is_homepage = is_homepage_url(matched_url)
                         st.balloons()
                         st.success(f"🎯 **Match Found at Clean Organic Position {clean_organic_rank}!**")
                         st.caption(f"Raw organic position from API: {matched_api_position}")
@@ -279,6 +281,10 @@ if st.button("Check Ranking", type="primary"):
                         st.caption(
                             "Estimated blended position (if local-pack appears above organic): "
                             f"{estimated_blended_rank}"
+                        )
+                        st.caption(
+                            "Matched URL type: "
+                            f"{'homepage/root' if matched_is_homepage else 'inner page'}"
                         )
                         st.caption(
                             f"Context: gl={country}, hl={language}, location={location.strip() or 'not set'}"
