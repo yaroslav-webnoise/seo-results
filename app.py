@@ -46,10 +46,13 @@ if st.button("Check Ranking", type="primary"):
                     if any(x in result_url for x in ["google.com", "google.co.il", "/place/", "/search?"]):
                         continue
                     
-                    # Simple core domain extraction using basic string splitting
-                    # "https://limedigital.co.il" -> "www.limedigital.co.il" -> "limedigital.co.il"
-                    raw_domain = result_url.split("//")[-1].split("/")[0]
-                    clean_domain = raw_domain.replace("www.", "")
+                    # Bulletproof core domain extraction
+                    try:
+                        # Extract the part after // and grab ONLY the first text segment before the next /
+                        domain_part = result_url.split("//")[-1].split("/")[0]
+                        clean_domain = domain_part.replace("www.", "")
+                    except Exception:
+                        clean_domain = result_url
                     
                     # 🛡️ FILTER 2: If we already counted this domain, it's a nested sitelink. SKIP IT!
                     if clean_domain in seen_domains:
