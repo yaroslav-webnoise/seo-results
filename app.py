@@ -169,16 +169,16 @@ with st.sidebar:
         st.success("Cached SERP data cleared. The next check will fetch fresh results.")
     strict_homepage_mode = st.checkbox(
         "Strict homepage mode",
-        value=False,
+        value=True,
         help="Only report the root URL (/). If the homepage is missing, the app will not fall back to inner pages.",
     )
     st.subheader("📍 Local Pack Exclusion")
-    use_manual_local_exclusion = st.checkbox("Set map/business count manually", value=True)
+    use_manual_local_exclusion = st.checkbox("Set map/business count manually", value=False)
     manual_local_count = st.number_input(
         "Non-sponsored map/business results above organic",
         min_value=0,
         max_value=20,
-        value=3,
+        value=0,
         step=1,
         help="Use this when Serper search response does not include local-pack data.",
     )
@@ -227,6 +227,9 @@ if st.button("Check Ranking", type="primary"):
                 homepage_domain_match = None
                 homepage_domain_match_rank = None
                 homepage_domain_match_api_pos = None
+                selected = None
+                selected_rank = None
+                selected_api_pos = None
                 auto_local_business_count = count_non_sponsored_local_results(data)
                 local_business_count = manual_local_count if use_manual_local_exclusion else auto_local_business_count
                 
@@ -254,6 +257,9 @@ if st.button("Check Ranking", type="primary"):
                     
                     # Test if this clean unique website matches your agency domain
                     is_match = domains_match(normalized_target_domain, clean_domain)
+                    if same_domain_result is None and is_match:
+                        same_domain_result = result
+
                     if match_mode == "Domain (any page on domain)" and is_match:
                         if first_domain_match is None:
                             first_domain_match = result
@@ -306,9 +312,16 @@ if st.button("Check Ranking", type="primary"):
 
                 # In domain mode, prefer homepage if available; otherwise fallback to first domain result.
                 if not found and match_mode == "Domain (any page on domain)" and first_domain_match is not None:
-                    selected = homepage_domain_match or first_domain_match
-                    selected_rank = homepage_domain_match_rank or first_domain_match_rank
-                    selected_api_pos = homepage_domain_match_api_pos or first_domain_match_api_pos
+                    if strict_homepage_mode and homepage_domain_match is None:
+                        selected = None
+                        selected_rank = None
+                        selected_api_pos = None
+                    else:
+                        selected = homepage_domain_match or first_domain_match
+                        selected_rank = homepage_domain_match_rank or first_domain_match_rank
+                        selected_api_pos = homepage_domain_match_api_pos or first_domain_match_api_pos
+
+                if not found and match_mode == "Domain (any page on domain)" and selected is not None:
                     adjusted_rank = max(1, selected_api_pos - int(local_business_count))
                     organic_page_number = ((selected_api_pos - 1) // 10) + 1
                     organic_page_position = ((selected_api_pos - 1) % 10) + 1
@@ -340,7 +353,16 @@ if st.button("Check Ranking", type="primary"):
                     found = True
                 
                 if not found:
-                    if (match_mode == "Exact URL (homepage/page only)" or strict_homepage_mode) and same_domain_result is not None:
+                    if strict_homepage_mode and same_domain_result is not None:
+                        st.warning(
+                            f"Homepage '{target_domain}' is not present in the organic results for '{keyword}'."
+                        )
+                        st.info(
+                            "Domain was found, but the homepage/root URL was not present. "
+                            f"Closest domain match in this SERP: {same_domain_result.get('link')} "
+                            f"(position {same_domain_result.get('position')})."
+                        )
+                    elif match_mode == "Exact URL (homepage/page only)" and same_domain_result is not None:
                         st.warning(
                             f"Exact URL '{target_domain}' is not present in the organic results for '{keyword}'."
                         )
