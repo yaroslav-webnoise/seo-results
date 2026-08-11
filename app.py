@@ -12,8 +12,7 @@ st.write("Find the exact organic position of any website on Google.")
 # Sidebar now only controls country settings
 with st.sidebar:
     st.header("⚙️ Target Market")
-    country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au"], index=0)
-
+    country = st.selectbox("Google Country (gl)", ["il", "us", "uk", "ca", "au", "de", "fr"], index=0)
 
 # Main input forms
 keyword = st.text_input("Enter Keyword", placeholder="e.g., digital agency")
@@ -21,12 +20,12 @@ target_domain = st.text_input("Enter Target Domain", placeholder="e.g., example.
 
 if st.button("Check Ranking", type="primary"):
     if not SERPER_API_KEY or SERPER_API_KEY == "PASTE_YOUR_ACTUAL_API_KEY_HERE":
-        st.error("Please replace 'PASTE_YOUR_ACTUAL_API_KEY_HERE' in the code with your real Serper API key.")
+        st.error("Please replace the placeholder with your real Serper API key.")
     elif not keyword or not target_domain:
         st.warning("Please fill in both the Keyword and Target Domain fields.")
     else:
         with st.spinner("Searching Google..."):
-            url = "https://google.serper.dev/search"
+            url = "https://serper.dev"
             payload = {"q": keyword, "num": 100, "gl": country}
             headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
             
@@ -37,16 +36,21 @@ if st.button("Check Ranking", type="primary"):
                 organic_results = data.get('organic', [])
                 
                 found = False
-                for index, result in enumerate(organic_results, start=1):
-                    if target_domain.lower() in result.get('link', '').lower():
-                        st.balloons()
-                        st.success(f"🎯 **Match Found at Position {index}!**")
-                        st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
-                        found = True
-                        break
+                for result in organic_results:
+                    # Extract Google's clean organic position ranking
+                    actual_rank = result.get('position')
+                    
+                    # If it has a clean position number, it's a real organic link (skipping maps/widgets)
+                    if actual_rank is not None:
+                        if target_domain.lower() in result.get('link', '').lower():
+                            st.balloons()
+                            st.success(f"🎯 **Match Found at True Organic Position {actual_rank}!**")
+                            st.info(f"**Title:** {result.get('title')}\n\n**URL:** [{result.get('link')}]({result.get('link')})")
+                            found = True
+                            break
                 
                 if not found:
-                    st.error(f"❌ '{target_domain}' was not found in the top {len(organic_results)} results for '{keyword}'.")
+                    st.error(f"❌ '{target_domain}' was not found in the organic results for '{keyword}'.")
                     
             except Exception as e:
                 st.error(f"An error occurred: {e}")
